@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node
+node_modules/
+
+# Session artifacts (not part of the app)
+CONVERSATION_TRANSCRIPT.md
+GIT_DIFF.patch

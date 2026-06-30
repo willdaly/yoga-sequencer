@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yoga Sequencer</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>Yoga Sequencer</h1>
+      <nav class="tabs">
+        <button class="tab is-active" data-view="plan">Plan</button>
+        <button class="tab" data-view="library">
+          Library <span id="libraryCount" class="count">0</span>
+        </button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- ============ PLAN VIEW ============ -->
+      <section id="view-plan" class="view is-active">
+        <form id="planForm" class="form">
+          <div class="field">
+            <label>Duration</label>
+            <div class="chips" id="durationChips">
+              <button type="button" class="chip" data-value="30 min">30</button>
+              <button type="button" class="chip" data-value="45 min">45</button>
+              <button type="button" class="chip is-active" data-value="60 min">60</button>
+              <button type="button" class="chip" data-value="75 min">75</button>
+              <button type="button" class="chip" data-value="90 min">90</button>
+            </div>
+            <input type="hidden" id="duration" value="60 min" />
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="level">Level</label>
+              <select id="level">
+                <option>1</option>
+                <option selected>2</option>
+                <option>2-3</option>
+                <option>3</option>
+                <option>1-2</option>
+                <option>Mixed</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="style">Style</label>
+              <input
+                id="style"
+                list="styleOptions"
+                value="Vinyasa"
+                placeholder="e.g. Power vinyasa"
+              />
+              <datalist id="styleOptions">
+                <option value="Vinyasa"></option>
+                <option value="Power vinyasa"></option>
+                <option value="Slow flow"></option>
+                <option value="Restorative"></option>
+                <option value="Yin"></option>
+                <option value="Hatha"></option>
+              </datalist>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="focus">Focus or intention</label>
+            <input
+              id="focus"
+              placeholder="e.g. hip openers, backbends with peak Wheel, standing balance"
+            />
+          </div>
+
+          <div class="field">
+            <label for="constraints">Constraints or contraindications</label>
+            <input
+              id="constraints"
+              placeholder="e.g. pregnant 2nd trimester, left wrist injury — or leave blank"
+            />
+          </div>
+
+          <div class="field">
+            <label>Available props</label>
+            <div class="chips" id="propChips">
+              <button type="button" class="chip is-active" data-prop="mat">mat</button>
+              <button type="button" class="chip" data-prop="2 blocks">2 blocks</button>
+              <button type="button" class="chip" data-prop="strap">strap</button>
+              <button type="button" class="chip" data-prop="bolster">bolster</button>
+              <button type="button" class="chip" data-prop="blanket">blanket</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="group">Group type</label>
+            <input
+              id="group"
+              placeholder="e.g. mixed levels, drop-in, individual, small group"
+            />
+          </div>
+
+          <button type="submit" id="generateBtn" class="primary">
+            Generate plan
+          </button>
+        </form>
+
+        <div id="status" class="status" hidden></div>
+
+        <article id="result" class="result" hidden>
+          <div class="result-actions">
+            <button id="editBtn" class="ghost">Edit</button>
+            <button id="saveBtn" class="ghost">Save</button>
+            <button id="printBtn" class="ghost">Print</button>
+            <button id="exportBtn" class="ghost">Export .md</button>
+          </div>
+          <div id="planRendered" class="plan-rendered"></div>
+          <textarea id="planEditor" class="plan-editor" hidden></textarea>
+        </article>
+      </section>
+
+      <!-- ============ LIBRARY VIEW ============ -->
+      <section id="view-library" class="view">
+        <div id="libraryEmpty" class="empty">
+          No saved plans yet. Generate one and hit <strong>Save</strong>.
+        </div>
+        <ul id="libraryList" class="library-list"></ul>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
