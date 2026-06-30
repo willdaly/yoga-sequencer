@@ -58,7 +58,7 @@ Work through this process, then present ONLY the final plan:
 
 1. List every constraint in the request: duration, level, style, focus, any student conditions or injuries, available props, group type.
 2. If a requested element conflicts with a stated condition or with the stated intention (for example, a strong arm-balance peak inside a restorative class), prioritize safety and coherence: adjust or omit it and state plainly what you changed and why. Never give a pose to a student it is contraindicated for.
-3. Choose a peak or prime (an arm balance, a standing posture, or a backbend) consistent with the level and intention.
+3. Choose a peak or prime (an arm balance, a standing posture, or a backbend) consistent with the level and intention. When a "Peak pose" is named in the request, build the whole class toward it: identify the specific actions that pose demands (for example, the wrist and arm loading, hip and core compression, hamstring or shoulder opening, and any balance or gaze it needs) and warm those actions deliberately through the warm-up and standing series; place the named peak pose exactly once, at the apex of the arc, by its Sanskrit (English) name; then follow it with a counterpose that neutralizes its primary action and a cool-down into final rest. Keep the peak within the stated level and never give it if a stated condition contraindicates it — in that case substitute a safe variation or accessible alternative and say what you changed and why. When no peak pose is named, choose one as usual from the level and intention.
 4. Build the arc in this order, adapting only when a gentler or restorative class is requested (then skip sun salutations and strong heat-building): arrival and centering; warm-up; heat-building with sun salutations; a first standing series, then a second; the peak; a grounding series of twists and counter folds to neutralize the spine; final rest. Sequence easier poses before harder ones, and open twists before closed.
 5. Assign a time to each section. When a section is done on both sides, give the section's total time, not a per-side time. Before finishing, add the section times, check that the sum equals the requested duration, and adjust the times until it does.
 6. Give at least one modification or prop option for any pose that commonly needs one, and substitute when a condition rules a pose out.
@@ -86,6 +86,7 @@ Duration: ${v(p.duration)}
 Level: ${v(p.level)}
 Style: ${v(p.style)}
 Focus or intention: ${v(p.focus)}
+Peak pose: ${v(p.peakPose)}
 Constraints or contraindications: ${v(p.constraints)}
 Available props: ${v(p.props)}
 Group type: ${v(p.group)}`;

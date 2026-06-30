@@ -107,6 +107,7 @@ function gatherParams() {
     level: $("#level").value,
     style: $("#style").value,
     focus: $("#focus").value,
+    peakPose: $("#peakPose").value,
     constraints: $("#constraints").value,
     props: selectedProps(),
     group: $("#group").value,
@@ -303,6 +304,7 @@ function restoreForm(p) {
   if (p.level) $("#level").value = p.level;
   if (p.style) $("#style").value = p.style;
   $("#focus").value = p.focus || "";
+  $("#peakPose").value = p.peakPose || "";
   $("#constraints").value = p.constraints || "";
   $("#group").value = p.group || "";
   const propSet = new Set((p.props || "").split(",").map((s) => s.trim()));
