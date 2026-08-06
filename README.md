@@ -54,13 +54,14 @@ without calling the model.
 | `public/`             | The browser app (no build step)                         |
 | `harness.mjs`         | Coursework experiment runner (not used by the app)      |
 | `prompt.js`           | Prompt used **only** by `harness.mjs`                   |
+| `docs/`               | Source class the worked example came from               |
 | `docs/course/`        | AAI6655 paper and supporting material                   |
 
 ## Coursework
 
 This started as the AAI6655 prompt-engineering project. The write-up lives in
-[`docs/course/`](docs/course/), and `January 4th A.docx` is the real class the
-prompt's worked example was drawn from.
+[`docs/course/`](docs/course/), and [`docs/January 4th A.docx`](docs/) is the
+real class the prompt's worked example was drawn from.
 
 `node harness.mjs` runs the final-project experiment (approaches v2 / A / B / C
 over 11 cases) using the prompt in `prompt.js`; output lands in `results/`. Two
