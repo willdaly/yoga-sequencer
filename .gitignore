@@ -220,11 +220,9 @@ __marimo__/
 # Node
 node_modules/
 
-# Session artifacts (not part of the app)
-CONVERSATION_TRANSCRIPT.md
-V2_CONVERSATION_TRANSCRIPT.md
-GIT_DIFF.patch
-changes.diff
+# Session artifacts: development transcripts and diffs kept locally as
+# coursework evidence, not published with the app.
+docs/course/process/
 
 # Final project harness output
 results/
