@@ -45,12 +45,27 @@ is never sent to the browser — the browser only talks to this server's
 `GET /health` returns `{ "status": "ok", "model": ..., "hasApiKey": true|false }`
 without calling the model.
 
-## Final-project test harness
+## Project layout
 
-`node harness.mjs` runs the AAI6655 final-project experiment (approaches v2 / A /
-B / C over 11 cases) using the prompt in `prompt.js`; outputs land in `results/`.
-Two completed runs are kept in this repo: `results/` (first run) and
-`results-run2/` (second run, also zipped as `results-run2.zip`).
+| Path                  | What it is                                              |
+| --------------------- | ------------------------------------------------------- |
+| `server.js`           | Express server; serves `public/` and proxies the model  |
+| `src/systemPrompt.js` | The sequencing system prompt the app generates from     |
+| `public/`             | The browser app (no build step)                         |
+| `harness.mjs`         | Coursework experiment runner (not used by the app)      |
+| `prompt.js`           | Prompt used **only** by `harness.mjs`                   |
+| `docs/course/`        | AAI6655 paper and supporting material                   |
+
+## Coursework
+
+This started as the AAI6655 prompt-engineering project. The write-up lives in
+[`docs/course/`](docs/course/), and `January 4th A.docx` is the real class the
+prompt's worked example was drawn from.
+
+`node harness.mjs` runs the final-project experiment (approaches v2 / A / B / C
+over 11 cases) using the prompt in `prompt.js`; output lands in `results/`. Two
+completed runs are kept locally as `results/` and `results-run2/`; both are
+gitignored, as are the development transcripts in `docs/course/process/`.
 
 ## Deploying later
 
