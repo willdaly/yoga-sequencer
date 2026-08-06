@@ -1,11 +1,114 @@
-"use strict";
+'use strict';
 
-const STORAGE_KEY = "yoga-sequencer-plans";
+const STORAGE_KEY = 'yoga-sequencer.plans.v1';
 
-/* ---------- tiny helpers ---------- */
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+const $ = (id) => document.getElementById(id);
 
+// ---- Elements ----
+const form = $('plan-form');
+const durationInput = $('duration');
+const durationValue = $('duration-value');
+const generateBtn = $('generate-btn');
+const statusEl = $('status');
+const editor = $('editor');
+const planTitle = $('plan-title');
+const planText = $('plan-text');
+const saveBtn = $('save-btn');
+const printBtn = $('print-btn');
+const downloadBtn = $('download-btn');
+
+const tabBuild = $('tab-build');
+const tabLibrary = $('tab-library');
+const viewBuild = $('view-build');
+const viewLibrary = $('view-library');
+const libraryList = $('library-list');
+const libraryEmpty = $('library-empty');
+const libraryCount = $('library-count');
+const printArea = $('print-area');
+
+// Tracks which saved plan is currently open (so Save updates instead of duplicating).
+let currentPlanId = null;
+
+// ---- Duration slider label ----
+durationInput.addEventListener('input', () => {
+  durationValue.textContent = `${durationInput.value} min`;
+});
+
+// ---- Tabs ----
+function showTab(which) {
+  const build = which === 'build';
+  tabBuild.classList.toggle('is-active', build);
+  tabLibrary.classList.toggle('is-active', !build);
+  viewBuild.hidden = !build;
+  viewLibrary.hidden = build;
+  if (!build) renderLibrary();
+}
+tabBuild.addEventListener('click', () => showTab('build'));
+tabLibrary.addEventListener('click', () => showTab('library'));
+
+// ---- Status helper ----
+function setStatus(message, kind) {
+  if (!message) {
+    statusEl.hidden = true;
+    statusEl.textContent = '';
+    statusEl.className = 'status';
+    return;
+  }
+  statusEl.hidden = false;
+  statusEl.textContent = message;
+  statusEl.className = 'status' + (kind ? ` is-${kind}` : '');
+}
+
+// ---- Read the class parameters ----
+function readParams() {
+  return {
+    duration: `${durationInput.value} min`,
+    level: $('level').value,
+    style: $('style').value,
+    focus: $('focus').value,
+    peakPose: $('peak-pose').value,
+    constraints: $('constraints').value,
+    props: $('props').value,
+    group: $('group').value,
+  };
+}
+
+function defaultTitle(params) {
+  const bits = [params.duration, params.level && `L${params.level}`, params.style].filter(Boolean);
+  const focus = params.focus && params.focus.trim();
+  return focus ? `${bits.join(' ')} — ${focus}` : bits.join(' ');
+}
+
+// ---- Generate ----
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const params = readParams();
+  generateBtn.disabled = true;
+  setStatus('Generating plan…', 'loading');
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+
+    currentPlanId = null; // a freshly generated plan is not yet saved
+    planText.value = data.plan;
+    planTitle.value = defaultTitle(params);
+    editor.hidden = false;
+    setStatus('');
+    editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    setStatus(err.message, 'error');
+  } finally {
+    generateBtn.disabled = false;
+  }
+});
+
+// ---- Library storage ----
 function loadPlans() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -15,301 +118,128 @@ function loadPlans() {
 }
 function savePlans(plans) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
+  updateLibraryCount();
+}
+function updateLibraryCount() {
+  const n = loadPlans().length;
+  libraryCount.textContent = n ? `(${n})` : '';
 }
 
-function escapeHtml(s) {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-/* Minimal markdown renderer: headings, bold, list items, paragraphs.
-   Enough for the plan output contract; intentionally small. */
-function renderMarkdown(md) {
-  const lines = md.split("\n");
-  let html = "";
-  let inList = false;
-  const closeList = () => {
-    if (inList) {
-      html += "</ul>";
-      inList = false;
-    }
-  };
-  for (let raw of lines) {
-    const line = raw.trimEnd();
-    if (!line.trim()) {
-      closeList();
-      continue;
-    }
-    let inline = escapeHtml(line).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-    const h = inline.match(/^(#{1,4})\s+(.*)$/);
-    if (h) {
-      closeList();
-      const level = h[1].length + 1; // shift so # -> h2
-      html += `<h${level}>${h[2]}</h${level}>`;
-      continue;
-    }
-    if (/^[-*]\s+/.test(line)) {
-      if (!inList) {
-        html += "<ul>";
-        inList = true;
-      }
-      html += `<li>${inline.replace(/^[-*]\s+/, "")}</li>`;
-      continue;
-    }
-    closeList();
-    html += `<p>${inline}</p>`;
-  }
-  closeList();
-  return html;
-}
-
-/* ---------- tab switching ---------- */
-$$(".tab").forEach((tab) => {
-  tab.addEventListener("click", () => {
-    const view = tab.dataset.view;
-    $$(".tab").forEach((t) => t.classList.toggle("is-active", t === tab));
-    $$(".view").forEach((v) =>
-      v.classList.toggle("is-active", v.id === `view-${view}`)
-    );
-    if (view === "library") renderLibrary();
-  });
-});
-
-/* ---------- form: duration chips ---------- */
-$("#durationChips").addEventListener("click", (e) => {
-  const chip = e.target.closest(".chip");
-  if (!chip) return;
-  $$("#durationChips .chip").forEach((c) =>
-    c.classList.toggle("is-active", c === chip)
-  );
-  $("#duration").value = chip.dataset.value;
-});
-
-/* ---------- form: prop chips (multi-select) ---------- */
-$("#propChips").addEventListener("click", (e) => {
-  const chip = e.target.closest(".chip");
-  if (!chip) return;
-  chip.classList.toggle("is-active");
-});
-function selectedProps() {
-  const props = $$("#propChips .chip.is-active").map((c) => c.dataset.prop);
-  return props.length ? props.join(", ") : "mat only";
-}
-
-/* ---------- generate ---------- */
-let currentPlanText = "";
-
-function gatherParams() {
-  return {
-    duration: $("#duration").value,
-    level: $("#level").value,
-    style: $("#style").value,
-    focus: $("#focus").value,
-    constraints: $("#constraints").value,
-    props: selectedProps(),
-    group: $("#group").value,
-  };
-}
-
-function setStatus(msg, kind) {
-  const el = $("#status");
-  if (!msg) {
-    el.hidden = true;
+saveBtn.addEventListener('click', () => {
+  const text = planText.value.trim();
+  if (!text) {
+    setStatus('Nothing to save yet.', 'error');
     return;
   }
-  el.hidden = false;
-  el.textContent = msg;
-  el.className = `status ${kind || ""}`;
-}
-
-$("#planForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const params = gatherParams();
-  const btn = $("#generateBtn");
-  btn.disabled = true;
-  btn.textContent = "Generating…";
-  setStatus("Sequencing your class — this takes a few seconds.", "working");
-  $("#result").hidden = true;
-
-  try {
-    const res = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(params),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Request failed");
-    showPlan(data.plan, params);
-    setStatus("");
-  } catch (err) {
-    setStatus(err.message, "error");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Generate plan";
-  }
-});
-
-function showPlan(text, params) {
-  currentPlanText = text;
-  currentParams = params;
-  exitEdit();
-  $("#planRendered").innerHTML = renderMarkdown(text);
-  $("#result").hidden = false;
-  $("#result").scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-/* ---------- edit / save / print / export ---------- */
-let currentParams = null;
-let editing = false;
-
-function enterEdit() {
-  editing = true;
-  $("#planEditor").value = currentPlanText;
-  $("#planEditor").hidden = false;
-  $("#planRendered").hidden = true;
-  $("#editBtn").textContent = "Done";
-}
-function exitEdit() {
-  if (editing) {
-    currentPlanText = $("#planEditor").value;
-    $("#planRendered").innerHTML = renderMarkdown(currentPlanText);
-  }
-  editing = false;
-  $("#planEditor").hidden = true;
-  $("#planRendered").hidden = false;
-  $("#editBtn").textContent = "Edit";
-}
-
-$("#editBtn").addEventListener("click", () => {
-  editing ? exitEdit() : enterEdit();
-});
-
-$("#saveBtn").addEventListener("click", () => {
-  if (editing) exitEdit();
   const plans = loadPlans();
-  const title = deriveTitle(currentParams, currentPlanText);
-  plans.unshift({
-    id: String(plans.length ? Number(plans[0].id) + 1 : 1),
-    title,
-    params: currentParams,
-    text: currentPlanText,
-    savedAt: new Date().toISOString(),
-  });
+  const title = planTitle.value.trim() || 'Untitled plan';
+  const now = new Date().toISOString();
+
+  const existing = currentPlanId && plans.find((p) => p.id === currentPlanId);
+  if (existing) {
+    existing.title = title;
+    existing.plan = text;
+    existing.updatedAt = now;
+  } else {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    plans.unshift({ id, title, plan: text, createdAt: now, updatedAt: now });
+    currentPlanId = id;
+  }
   savePlans(plans);
-  updateLibraryCount();
-  setStatus(`Saved “${title}” to your library.`, "ok");
+  setStatus('Saved to library.', 'loading');
+  setTimeout(() => setStatus(''), 1500);
 });
 
-$("#printBtn").addEventListener("click", () => {
-  if (editing) exitEdit();
-  window.print();
-});
-
-$("#exportBtn").addEventListener("click", () => {
-  if (editing) exitEdit();
-  const blob = new Blob([currentPlanText], { type: "text/markdown" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${deriveTitle(currentParams, currentPlanText)
-    .replace(/[^\w]+/g, "-")
-    .toLowerCase()}.md`;
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-function deriveTitle(params, text) {
-  const p = params || {};
-  const focus = (p.focus || "").trim();
-  const base = [p.duration, p.style, focus].filter(Boolean).join(" · ");
-  return base || "Yoga class";
-}
-
-/* ---------- library ---------- */
-function updateLibraryCount() {
-  $("#libraryCount").textContent = String(loadPlans().length);
+// ---- Render library ----
+function formatDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) +
+    ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
 function renderLibrary() {
   const plans = loadPlans();
-  const list = $("#libraryList");
-  $("#libraryEmpty").hidden = plans.length > 0;
-  list.innerHTML = "";
-  for (const plan of plans) {
-    const li = document.createElement("li");
-    li.className = "library-item";
-    const when = new Date(plan.savedAt).toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-    li.innerHTML = `
-      <div class="library-meta">
-        <span class="library-title">${escapeHtml(plan.title)}</span>
-        <span class="library-date">${when}</span>
-      </div>
-      <div class="library-buttons">
-        <button class="ghost" data-action="open">Open</button>
-        <button class="ghost" data-action="duplicate">Duplicate</button>
-        <button class="ghost danger" data-action="delete">Delete</button>
-      </div>`;
-    li.querySelector('[data-action="open"]').addEventListener("click", () => {
-      openSaved(plan);
-    });
-    li.querySelector('[data-action="duplicate"]').addEventListener(
-      "click",
-      () => duplicateSaved(plan)
-    );
-    li.querySelector('[data-action="delete"]').addEventListener("click", () => {
-      if (confirm(`Delete “${plan.title}”?`)) deleteSaved(plan.id);
-    });
-    list.appendChild(li);
+  updateLibraryCount();
+  libraryEmpty.hidden = plans.length > 0;
+  libraryList.innerHTML = '';
+
+  for (const p of plans) {
+    const li = document.createElement('li');
+    li.className = 'library-item';
+
+    const h3 = document.createElement('h3');
+    h3.textContent = p.title;
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = `Saved ${formatDate(p.updatedAt || p.createdAt)}`;
+
+    const actions = document.createElement('div');
+    actions.className = 'item-actions';
+
+    const openBtn = document.createElement('button');
+    openBtn.className = 'btn';
+    openBtn.textContent = 'Open';
+    openBtn.addEventListener('click', () => openPlan(p.id));
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-danger';
+    delBtn.textContent = 'Delete';
+    delBtn.addEventListener('click', () => deletePlan(p.id));
+
+    actions.append(openBtn, delBtn);
+    li.append(h3, meta, actions);
+    libraryList.append(li);
   }
 }
 
-function openSaved(plan) {
-  $$(".tab").forEach((t) => t.classList.toggle("is-active", t.dataset.view === "plan"));
-  $$(".view").forEach((v) => v.classList.toggle("is-active", v.id === "view-plan"));
-  if (plan.params) restoreForm(plan.params);
-  showPlan(plan.text, plan.params);
+function openPlan(id) {
+  const plan = loadPlans().find((p) => p.id === id);
+  if (!plan) return;
+  currentPlanId = id;
+  planTitle.value = plan.title;
+  planText.value = plan.plan;
+  editor.hidden = false;
+  showTab('build');
+  setStatus('');
+  editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function duplicateSaved(plan) {
-  const plans = loadPlans();
-  plans.unshift({
-    ...plan,
-    id: String(Number(plans[0].id) + 1),
-    title: plan.title + " (copy)",
-    savedAt: new Date().toISOString(),
-  });
+function deletePlan(id) {
+  if (!confirm('Delete this plan? This cannot be undone.')) return;
+  const plans = loadPlans().filter((p) => p.id !== id);
   savePlans(plans);
-  updateLibraryCount();
+  if (currentPlanId === id) currentPlanId = null;
   renderLibrary();
 }
 
-function deleteSaved(id) {
-  savePlans(loadPlans().filter((p) => p.id !== id));
-  updateLibraryCount();
-  renderLibrary();
-}
+// ---- Print ----
+printBtn.addEventListener('click', () => {
+  const title = planTitle.value.trim() || 'Yoga class plan';
+  printArea.innerHTML = '';
+  const h = document.createElement('h2');
+  h.textContent = title;
+  const body = document.createElement('div');
+  body.textContent = planText.value;
+  printArea.append(h, body);
+  window.print();
+});
 
-function restoreForm(p) {
-  $("#duration").value = p.duration || "60 min";
-  $$("#durationChips .chip").forEach((c) =>
-    c.classList.toggle("is-active", c.dataset.value === p.duration)
-  );
-  if (p.level) $("#level").value = p.level;
-  if (p.style) $("#style").value = p.style;
-  $("#focus").value = p.focus || "";
-  $("#constraints").value = p.constraints || "";
-  $("#group").value = p.group || "";
-  const propSet = new Set((p.props || "").split(",").map((s) => s.trim()));
-  $$("#propChips .chip").forEach((c) =>
-    c.classList.toggle("is-active", propSet.has(c.dataset.prop))
-  );
-}
+// ---- Download ----
+downloadBtn.addEventListener('click', () => {
+  const title = planTitle.value.trim() || 'yoga-plan';
+  const safe = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'yoga-plan';
+  const content = `# ${title}\n\n${planText.value}\n`;
+  const blob = new Blob([content], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${safe}.md`;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
 
-/* ---------- init ---------- */
+// ---- Init ----
 updateLibraryCount();

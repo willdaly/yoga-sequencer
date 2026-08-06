@@ -1,132 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Yoga Sequencer</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <header class="topbar">
-      <h1>Yoga Sequencer</h1>
-      <nav class="tabs">
-        <button class="tab is-active" data-view="plan">Plan</button>
-        <button class="tab" data-view="library">
-          Library <span id="libraryCount" class="count">0</span>
-        </button>
-      </nav>
-    </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#111418" />
+  <title>Yoga Sequencer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Yoga Sequencer</h1>
+    <nav class="tabs" role="tablist">
+      <button id="tab-build" class="tab is-active" role="tab">Build</button>
+      <button id="tab-library" class="tab" role="tab">Library <span id="library-count" class="count"></span></button>
+    </nav>
+  </header>
 
-    <main>
-      <!-- ============ PLAN VIEW ============ -->
-      <section id="view-plan" class="view is-active">
-        <form id="planForm" class="form">
-          <div class="field">
-            <label>Duration</label>
-            <div class="chips" id="durationChips">
-              <button type="button" class="chip" data-value="30 min">30</button>
-              <button type="button" class="chip" data-value="45 min">45</button>
-              <button type="button" class="chip is-active" data-value="60 min">60</button>
-              <button type="button" class="chip" data-value="75 min">75</button>
-              <button type="button" class="chip" data-value="90 min">90</button>
-            </div>
-            <input type="hidden" id="duration" value="60 min" />
-          </div>
-
-          <div class="row">
-            <div class="field">
-              <label for="level">Level</label>
-              <select id="level">
-                <option>1</option>
-                <option selected>2</option>
-                <option>2-3</option>
-                <option>3</option>
-                <option>1-2</option>
-                <option>Mixed</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="style">Style</label>
-              <input
-                id="style"
-                list="styleOptions"
-                value="Vinyasa"
-                placeholder="e.g. Power vinyasa"
-              />
-              <datalist id="styleOptions">
-                <option value="Vinyasa"></option>
-                <option value="Power vinyasa"></option>
-                <option value="Slow flow"></option>
-                <option value="Restorative"></option>
-                <option value="Yin"></option>
-                <option value="Hatha"></option>
-              </datalist>
-            </div>
-          </div>
-
-          <div class="field">
-            <label for="focus">Focus or intention</label>
-            <input
-              id="focus"
-              placeholder="e.g. hip openers, backbends with peak Wheel, standing balance"
-            />
-          </div>
-
-          <div class="field">
-            <label for="constraints">Constraints or contraindications</label>
-            <input
-              id="constraints"
-              placeholder="e.g. pregnant 2nd trimester, left wrist injury — or leave blank"
-            />
-          </div>
-
-          <div class="field">
-            <label>Available props</label>
-            <div class="chips" id="propChips">
-              <button type="button" class="chip is-active" data-prop="mat">mat</button>
-              <button type="button" class="chip" data-prop="2 blocks">2 blocks</button>
-              <button type="button" class="chip" data-prop="strap">strap</button>
-              <button type="button" class="chip" data-prop="bolster">bolster</button>
-              <button type="button" class="chip" data-prop="blanket">blanket</button>
-            </div>
-          </div>
-
-          <div class="field">
-            <label for="group">Group type</label>
-            <input
-              id="group"
-              placeholder="e.g. mixed levels, drop-in, individual, small group"
-            />
-          </div>
-
-          <button type="submit" id="generateBtn" class="primary">
-            Generate plan
-          </button>
-        </form>
-
-        <div id="status" class="status" hidden></div>
-
-        <article id="result" class="result" hidden>
-          <div class="result-actions">
-            <button id="editBtn" class="ghost">Edit</button>
-            <button id="saveBtn" class="ghost">Save</button>
-            <button id="printBtn" class="ghost">Print</button>
-            <button id="exportBtn" class="ghost">Export .md</button>
-          </div>
-          <div id="planRendered" class="plan-rendered"></div>
-          <textarea id="planEditor" class="plan-editor" hidden></textarea>
-        </article>
-      </section>
-
-      <!-- ============ LIBRARY VIEW ============ -->
-      <section id="view-library" class="view">
-        <div id="libraryEmpty" class="empty">
-          No saved plans yet. Generate one and hit <strong>Save</strong>.
+  <main>
+    <!-- BUILD VIEW -->
+    <section id="view-build" class="view">
+      <form id="plan-form" autocomplete="off">
+        <div class="field">
+          <label for="duration">Duration <span id="duration-value" class="value">60 min</span></label>
+          <input type="range" id="duration" name="duration" min="15" max="120" step="5" value="60" />
         </div>
-        <ul id="libraryList" class="library-list"></ul>
-      </section>
-    </main>
 
-    <script src="app.js"></script>
-  </body>
+        <div class="row">
+          <div class="field">
+            <label for="level">Level</label>
+            <select id="level" name="level">
+              <option value="1">1 — Beginner</option>
+              <option value="1-2">1–2</option>
+              <option value="2" selected>2 — Intermediate</option>
+              <option value="2-3">2–3</option>
+              <option value="3">3 — Advanced</option>
+              <option value="Mixed">Mixed levels</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="style">Style</label>
+            <select id="style" name="style">
+              <option value="Vinyasa" selected>Vinyasa</option>
+              <option value="Power vinyasa">Power vinyasa</option>
+              <option value="Slow flow">Slow flow</option>
+              <option value="Hatha">Hatha</option>
+              <option value="Restorative">Restorative</option>
+              <option value="Yin">Yin</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="focus">Focus or intention</label>
+          <input type="text" id="focus" name="focus" placeholder="e.g. standing balance, peak Half Moon" />
+        </div>
+
+        <div class="field">
+          <label for="peak-pose">Peak pose <span class="hint">— optional</span></label>
+          <input type="text" id="peak-pose" name="peakPose" placeholder="e.g. Bakasana (Crow) — or leave blank" />
+        </div>
+
+        <div class="field">
+          <label for="constraints">Constraints or contraindications</label>
+          <textarea id="constraints" name="constraints" rows="2" placeholder="e.g. pregnant student 2nd trimester; left wrist injury; none"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="props">Available props</label>
+          <input type="text" id="props" name="props" placeholder="e.g. mat, 2 blocks, strap" value="mat, 2 blocks" />
+        </div>
+
+        <div class="field">
+          <label for="group">Group type / notes</label>
+          <textarea id="group" name="group" rows="2" placeholder="e.g. drop-in mixed class; small group; private student"></textarea>
+        </div>
+
+        <button type="submit" id="generate-btn" class="btn btn-primary">Generate plan</button>
+      </form>
+
+      <div id="status" class="status" hidden></div>
+
+      <!-- EDITOR -->
+      <section id="editor" class="editor" hidden>
+        <div class="field">
+          <label for="plan-title">Plan title</label>
+          <input type="text" id="plan-title" placeholder="e.g. Tuesday 6pm — balance flow" />
+        </div>
+        <div class="field">
+          <label for="plan-text">Plan <span class="hint">— tap to edit</span></label>
+          <textarea id="plan-text" class="plan-text" spellcheck="false"></textarea>
+        </div>
+        <div class="actions">
+          <button id="save-btn" class="btn">Save to library</button>
+          <button id="print-btn" class="btn">Print</button>
+          <button id="download-btn" class="btn">Download</button>
+        </div>
+      </section>
+    </section>
+
+    <!-- LIBRARY VIEW -->
+    <section id="view-library" class="view" hidden>
+      <p id="library-empty" class="empty">No saved plans yet. Generate one in the Build tab and tap “Save to library.”</p>
+      <ul id="library-list" class="library-list"></ul>
+    </section>
+  </main>
+
+  <!-- Print target: filled at print time -->
+  <div id="print-area" aria-hidden="true"></div>
+
+  <script src="app.js"></script>
+</body>
 </html>
