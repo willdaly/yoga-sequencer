@@ -223,3 +223,7 @@ node_modules/
 # Session artifacts (not part of the app)
 CONVERSATION_TRANSCRIPT.md
 GIT_DIFF.patch
+
+# Final project harness output
+results/
+results.zip
