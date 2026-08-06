@@ -222,8 +222,15 @@ node_modules/
 
 # Session artifacts (not part of the app)
 CONVERSATION_TRANSCRIPT.md
+V2_CONVERSATION_TRANSCRIPT.md
 GIT_DIFF.patch
+changes.diff
 
 # Final project harness output
 results/
 results.zip
+results-run2/
+results-run2.zip
+
+# macOS
+.DS_Store

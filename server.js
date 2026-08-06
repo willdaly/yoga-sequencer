@@ -1,69 +1,101 @@
-import "dotenv/config";
-import express from "express";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import Anthropic from "@anthropic-ai/sdk";
-import { SYSTEM_PROMPT, buildUserMessage } from "./prompt.js";
+import 'dotenv/config';
+import express from 'express';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { SYSTEM_PROMPT } from './src/systemPrompt.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = process.env.PORT || 3000;
-const MODEL = process.env.MODEL || "claude-opus-4-8";
-const apiKey = process.env.ANTHROPIC_API_KEY;
+const MODEL = process.env.MODEL || 'claude-opus-4-8';
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
 const app = express();
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
 
-const client = apiKey ? new Anthropic({ apiKey }) : null;
+// Health check — does not touch the model or require a key.
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    model: MODEL,
+    hasApiKey: Boolean(ANTHROPIC_API_KEY),
+  });
+});
 
-app.post("/api/generate", async (req, res) => {
-  if (!client) {
+// Build the user message from the class parameters, matching the midterm template
+// (plus the optional peak pose).
+function buildUserMessage(p) {
+  const field = (v) => (v && String(v).trim() ? String(v).trim() : 'none');
+  return [
+    'Design a yoga class with these parameters.',
+    '',
+    `Duration: ${field(p.duration)}`,
+    `Level: ${field(p.level)}`,
+    `Style: ${field(p.style)}`,
+    `Focus or intention: ${field(p.focus)}`,
+    `Peak pose: ${field(p.peakPose)}`,
+    `Constraints or contraindications: ${field(p.constraints)}`,
+    `Available props: ${field(p.props)}`,
+    `Group type: ${field(p.group)}`,
+  ].join('\n');
+}
+
+// Proxy the model call. The API key never leaves the server.
+app.post('/api/generate', async (req, res) => {
+  if (!ANTHROPIC_API_KEY) {
     return res.status(500).json({
-      error:
-        "No ANTHROPIC_API_KEY configured. Copy .env.example to .env and add your key, then restart.",
+      error: 'Server is missing ANTHROPIC_API_KEY. Copy .env.example to .env and add your key.',
     });
   }
 
-  const params = req.body || {};
-  if (!params.duration || !params.style) {
-    return res
-      .status(400)
-      .json({ error: "Please provide at least a duration and a style." });
-  }
+  const userMessage = buildUserMessage(req.body || {});
 
   try {
-    const message = await client.messages.create({
-      model: MODEL,
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: buildUserMessage(params) }],
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 4096,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
     });
 
-    const plan = message.content
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("\n")
+    if (!response.ok) {
+      const detail = await response.text();
+      console.error('Anthropic API error:', response.status, detail);
+      return res.status(502).json({
+        error: `Model request failed (${response.status}). Check the server log and your API key.`,
+      });
+    }
+
+    const data = await response.json();
+    const plan = (data.content || [])
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
+      .join('\n')
       .trim();
+
+    if (!plan) {
+      return res.status(502).json({ error: 'Model returned an empty plan.' });
+    }
 
     res.json({ plan });
   } catch (err) {
-    const status = err?.status || 500;
-    const detail = err?.error?.error?.message || err?.message || "Unknown error";
-    console.error("Generation failed:", detail);
-    res.status(status).json({ error: `Claude request failed: ${detail}` });
+    console.error('Generate failed:', err);
+    res.status(500).json({ error: 'Could not reach the model. Check your connection and try again.' });
   }
 });
 
-app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, model: MODEL, keyConfigured: Boolean(client) });
-});
-
 app.listen(PORT, () => {
-  console.log(`Yoga Sequencer running at http://localhost:${PORT}`);
-  if (!client) {
-    console.warn(
-      "⚠  No ANTHROPIC_API_KEY found. The form will load but generation will fail until you add a key to .env."
-    );
+  console.log(`Yoga sequencer running at http://localhost:${PORT}`);
+  if (!ANTHROPIC_API_KEY) {
+    console.warn('Warning: ANTHROPIC_API_KEY is not set. Generation will fail until you add it to .env.');
   }
 });
